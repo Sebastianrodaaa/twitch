@@ -22,7 +22,7 @@ Each of the four flips reached 90% held-out agreement after 28 teacher answers. 
 
 The teacher labeled 57 of 58 held-out E frames “stay.” A constant stay policy would agree on 98.3% of them, and the reflex agreed on 94.8%. This class imbalance explains why the fast handoff and agreement recovery did not establish adaptation to the game rule. E scored 0.54× A in the smoke, below the 2× target. This two-minute run ends before the fifth flip.
 
-The rule-aware heuristic scored 270.0 points per minute without a crash. Random scored 33.5 points per minute and Beveridge scored 22.5. Beveridge delivered 21 decisions in two minutes, with median/p95 CPU inference of 5,295.463/6,532.862 ms. Its median includes concurrent CPU load from the paused smoke run and excludes initial model loading.
+The rule-aware heuristic scored 270.0 points per minute without a crash. Random scored 33.5 points per minute and Beveridge scored 22.5. Beveridge delivered 68 decisions in two minutes, with median/p95 CPU inference of 1,723.256/1,749.299 ms, excluding model loading. The original pilot delivered 21 decisions at 5,295.463/6,532.862 ms and the same score. It called inference three times per decision and overlapped the paused Qwen run. The table uses the corrected run with a single inference per decision.
 
 Pausing Qwen for every frame yielded 29.0 points per minute, below real-time Qwen's 42.5. The paused arm measures what this teacher does with fresh inputs. It is an imperfect reference for attainable score. Consecutive frozen documents share more of their prompt in B, and the median/p95 latency was 154.243/407.373 ms. The offline frozen reflex scored 22.5 points per minute and agreed with Qwen on all 51 first-flip audits. The smoke missed the predicted drop below 60%.
 

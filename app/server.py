@@ -78,15 +78,34 @@ async def replay(request):
     return response
 
 
+async def forward(ws, processes):
+    while True:
+        lines = await asyncio.gather(*(p.stdout.readline() for p in processes))
+        if not all(lines):
+            await ws.send_json({"error": "Live run stopped. Check the local llama.cpp server log."})
+            return
+        pair = [json.loads(line) for line in lines]
+        if pair[0].get("type") == "result":
+            await ws.send_json({"results": dict(zip("AE", pair))})
+            return
+        await ws.send_json({"row": pair})
+
+
+async def listen(ws):
+    async for _ in ws:
+        pass
+
+
 async def live(request):
     app = request.app
     # ponytail: one local comparison at a time; add a worker queue for shared serving.
     lock = app[LIVE_LOCK]
     if lock.locked():
         raise web.HTTPConflict(text="A live run is active")
-    ws = web.WebSocketResponse()
+    ws = web.WebSocketResponse(autoclose=False)
     await lock.acquire()
     processes = []
+    tasks = []
     try:
         await ws.prepare(request)
         seconds, url = app[LIVE]
@@ -98,26 +117,23 @@ async def live(request):
             ))
         await ws.send_json({"seed": 17, "flip": FLIP, "rules": RULES, "fps": FPS,
                             "total": round(seconds * FPS)})
-        while not ws.closed:
-            lines = await asyncio.gather(*(p.stdout.readline() for p in processes))
-            if not all(lines):
-                await ws.send_json({"error": "Live run stopped. Check the local llama.cpp server log."})
-                break
-            pair = [json.loads(line) for line in lines]
-            if pair[0].get("type") == "result":
-                await ws.send_json({"results": dict(zip("AE", pair))})
-                break
-            await ws.send_json({"row": pair})
+        tasks = [asyncio.create_task(forward(ws, processes)), asyncio.create_task(listen(ws))]
+        done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            task.result()
     except (ConnectionError, asyncio.CancelledError):
         pass
     finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         for p in processes:
             if p.returncode is None:
                 try:
                     p.terminate()
                 except ProcessLookupError:
                     pass
-        await asyncio.gather(*(p.wait() for p in processes))
+        await asyncio.gather(*(p.communicate() for p in processes))
         lock.release()
         await ws.close()
     return ws

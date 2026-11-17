@@ -70,8 +70,11 @@ def beveridge():
         "instructions": "Which one-lane move avoids a bad item and heads toward a good item at the first drop?",
         "criteria": dict(zip(ACTIONS, ("smaller lane number", "hold current lane", "larger lane number"))),
     }}
-    return lambda document: [model.decide(document, questions)["move"]["probabilities"][name]
-                             for name in ACTIONS]
+
+    def score(document):
+        probabilities = model.decide(document, questions)["move"]["probabilities"]
+        return [probabilities[name] for name in ACTIONS]
+    return score
 
 
 def timed_score(score, text, minimum=0.0):
