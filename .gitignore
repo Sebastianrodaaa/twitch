@@ -1,0 +1,6 @@
+.venv/
+.model/
+.smoke/
+__pycache__/
+*.tmp
+*.tmp.mp4

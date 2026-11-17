@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#E9EEF2">
+<title>twitch — lane game</title>
+<style>
+@font-face{font-family:Instrument;src:url('/fonts/instrumentsans.ttf');font-weight:400 700;font-display:swap}
+@font-face{font-family:Martian;src:url('/fonts/martianmono.ttf');font-weight:400 700;font-display:swap}
+:root{--paper:#e9eef2;--card:#f3f6f8;--ink:#14181c;--muted:#4d5b67;--line:#bdc9d2;--blue:#2447f9;--orange:#ff5a1f;--mono:Martian,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px Instrument,sans-serif}
+button,select,input{font:inherit;color:inherit}button,select{background:var(--card);border:1px solid var(--line);padding:9px 14px;border-radius:3px}
+button{cursor:pointer}button:hover,select:hover{border-color:var(--ink)}button:disabled,input:disabled{opacity:.55;cursor:default}
+button[aria-pressed="true"],.primary{background:var(--ink);border-color:var(--ink);color:white}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+header,main,footer{width:min(1680px,100% - 8vw);margin:auto}
+header{height:88px;display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:46px;letter-spacing:-.09em;line-height:1}.brand::after{content:"";width:.16em;height:.16em;background:var(--ink);display:inline-block;margin-left:.15em}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mono,time,output{font:400 .85em var(--mono);font-variant-numeric:tabular-nums}
+.meta{display:flex;align-items:center;gap:15px;margin:20px 0 12px;color:var(--muted);font-size:13px}
+.meta span+span{border-left:1px solid var(--line);padding-left:15px}
+.rule{background:var(--card);border:1px solid var(--line);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;border-radius:4px}
+.rule.flip{border-color:var(--orange);box-shadow:inset 5px 0 var(--orange);background:#fff1e9}
+.label{font-size:.74rem;font-weight:650;letter-spacing:.095em;text-transform:uppercase;color:var(--muted)}
+.rule h1{font-size:clamp(20px,2.3vw,38px);font-weight:650;letter-spacing:-.045em;margin:3px 0 0}.rule output{font-size:clamp(14px,1.4vw,22px);display:block;text-align:right;margin-top:5px}
+.station{display:grid;grid-template-columns:minmax(0,1fr) minmax(174px,19%);gap:14px}.pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.panel,.rail,.scope,.card{border:1px solid var(--line);border-radius:4px;background:var(--card);overflow:hidden}
+.panel[data-side="A"]{--side:var(--blue)}.panel[data-side="E"]{--side:var(--ink)}
+.panel{border-top:3px solid var(--side);position:relative}.panel.hit{box-shadow:inset 0 0 0 2px var(--side)}
+.panelhead{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:8px}
+.panel h2{font-size:clamp(17px,2.1vw,31px);color:var(--side);letter-spacing:-.04em;margin:0}
+.panel small{color:var(--muted);font-size:12px}.score{text-align:right;white-space:nowrap}.score output{font-size:clamp(15px,2.25vw,32px);display:block;line-height:1.4}
+.stage{position:relative;background:#e2eaf0}.stage canvas{width:100%;height:clamp(255px,40vh,540px);display:block}
+.alert{position:absolute;inset:auto 0 44px 0;text-align:center;font-weight:700;letter-spacing:.05em;color:var(--side);pointer-events:none}.alert span{background:var(--card);border:1px solid var(--side);padding:4px 8px}
+.paneltail{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;min-height:45px;gap:6px}.hearts{color:var(--side);letter-spacing:.12em;white-space:nowrap}
+.rail{display:flex;flex-direction:column}.rail h2{margin:0;padding:15px 16px;border-bottom:1px solid var(--line)}
+.rail dl{margin:0;display:grid;flex:1;grid-template-rows:repeat(4,1fr)}.rail dl div{padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:center;flex-direction:column}.rail dl div:last-child{border:0}.rail dd{margin:7px 0 0;font:clamp(16px,1.8vw,30px) var(--mono);letter-spacing:-.06em}.rail dt span{display:block;text-transform:none;letter-spacing:0;font-size:11px}
+.rail meter{margin-top:7px;width:100%;height:9px;accent-color:var(--ink)}meter::-webkit-meter-optimum-value{background:var(--ink)}
+.scope{margin-top:14px;padding:12px 14px 10px}.scopehead{display:flex;justify-content:space-between;gap:8px;margin-bottom:9px}.scopehead h2{font-size:17px;margin:0;letter-spacing:-.025em}.scopehead small{color:var(--muted)}
+.trace{display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px;align-items:center}.trace canvas{display:block;width:100%;height:66px}.trace div{display:grid;gap:15px;white-space:nowrap}.trace .teacher::before,.trace .reflex::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;background:var(--ink)}.trace .teacher::before{background:var(--orange)}
+.axis{margin-left:112px;display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+.transport{display:flex;align-items:center;gap:12px;margin:14px 0}.transport input{flex:1;min-width:30px;accent-color:var(--ink)}.transport time{min-width:112px;text-align:right}
+#caption{display:flex;align-items:center;justify-content:center;text-align:center;min-height:42px;padding:6px 12px;border-top:1px solid var(--line);font-weight:600}
+.results-title{font-size:clamp(28px,4vw,60px);letter-spacing:-.06em;margin:26px 0 8px}#summary{margin:0 0 18px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}.card{padding:18px}.card h3{margin:2px 0 16px;font-size:25px;letter-spacing:-.04em}.card dl{margin:0}.card dl div{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:11px 0;gap:12px}.card dd{margin:0;text-align:right}.card .headline{font-size:clamp(26px,4vw,57px);letter-spacing:-.095em;margin-bottom:16px}.card.primary-result{border-top:3px solid var(--ink)}.card:first-child{border-top:3px solid var(--blue)}
+.curve{margin-top:12px}.curve canvas{display:block;width:100%;height:160px}.note{font-size:13px;color:var(--muted)}footer{border-top:1px solid var(--line);color:var(--muted);font-size:12px;padding:12px 0 16px;margin-top:15px}
+[hidden]{display:none!important}
+@media(max-width:900px){.station{grid-template-columns:1fr}.rail dl{grid-template-columns:repeat(4,1fr);grid-template-rows:auto}.rail dl div{border-bottom:0;border-right:1px solid var(--line);padding:9px 12px}.rail h2{padding:9px 12px}}
+@media(max-width:540px){header,main,footer{width:calc(100% - 24px)}header{height:auto;min-height:74px}.brand{font-size:34px}.controls{gap:4px}.controls :is(button,select){padding:5px 6px;font-size:12px}.rule{padding:12px}.pair{gap:6px}.panelhead,.paneltail{padding:8px}.panel small{font-size:10px}.paneltail{flex-wrap:wrap}.hearts{font-size:13px}.rail dl{grid-template-columns:repeat(2,1fr)}.rail dl div:nth-child(-n+2){border-bottom:1px solid var(--line)}.trace{grid-template-columns:72px minmax(0,1fr)}.axis{margin-left:80px}.scopehead small,.trace .label{font-size:10px}}
+@media(orientation:portrait) and (min-width:541px){.station{grid-template-columns:1fr}.stage canvas{height:min(43vh,760px)}.rail dl{grid-template-columns:repeat(4,1fr);grid-template-rows:auto}.rail dl div{border-bottom:0;border-right:1px solid var(--line)}.rail dd{font-size:26px}.pair{gap:12px}}
+body.film{padding-top:3vh}body.film header,body.film main,body.film footer{width:min(1680px,100% - 9vw)}body.film .transport,body.film .controls,body.film footer{display:none}body.film #caption{margin-top:14px;font-size:clamp(17px,2vw,30px);min-height:68px}body.film .meta{font-size:17px}body.film .scope{padding:16px 20px}body.film .scopehead h2{font-size:20px}
+#filmTag{display:none}body.film #filmTag{display:block;margin-top:36px;font-size:clamp(20px,2.1vw,32px)}
+@media(orientation:portrait){body.film{padding-top:7vh}body.film .panelhead,body.film .paneltail{padding:17px 16px}body.film .panel h2{font-size:36px}body.film .panel small,body.film .label{font-size:17px}body.film .rule h1{font-size:37px}body.film .trace{grid-template-columns:135px minmax(0,1fr)}body.film .axis{margin-left:143px}body.film .score output{font-size:32px}body.film .card{padding:24px}body.film .cards{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand" aria-label="twitch">twitch</div>
+  <div class="controls" aria-label="Run controls">
+    <select id="recording" aria-label="Recording"></select>
+    <button id="replay">Replay</button><button id="live">Live run</button>
+    <button id="results" aria-pressed="false">Results</button>
+  </div>
+</header>
+<main>
+  <div class="meta"><span id="mode" class="mono">LOADING</span><span id="clock" class="mono">00:00.0</span><span id="seed" class="mono">30 Hz</span></div>
+  <section id="experiment" aria-label="Two-ship lane game">
+    <div id="rule" class="rule"><div><div id="epoch" class="label">Rule</div><h1 id="ruleText">Waiting for a run</h1></div><div><div class="label">Next flip</div><output id="flipIn">—</output></div></div>
+    <div class="station">
+      <div class="pair">
+        <article class="panel" data-side="A">
+          <div class="panelhead"><div><h2>LLM only</h2><small>Qwen 1.5B · CPU</small></div><div class="score"><span class="label">Score</span><output>0</output></div></div>
+          <div class="stage"><canvas role="img" aria-label="LLM ship and five lanes of falling items"></canvas><div class="alert" hidden><span></span></div></div>
+          <div class="paneltail"><span class="hearts" aria-label="3 hearts">♥♥♥</span><span class="label driver">Teacher hold</span></div>
+        </article>
+        <article class="panel" data-side="E">
+          <div class="panelhead"><div><h2>twitch</h2><small>Online reflex · CPU</small></div><div class="score"><span class="label">Score</span><output>0</output></div></div>
+          <div class="stage"><canvas role="img" aria-label="Twitch ship and five lanes of falling items"></canvas><div class="alert" hidden><span></span></div></div>
+          <div class="paneltail"><span class="hearts" aria-label="3 hearts">♥♥♥</span><span class="label driver">Teacher hold</span></div>
+        </article>
+      </div>
+      <aside class="rail" aria-label="Live metrics">
+        <h2 class="label">Decision telemetry</h2>
+        <dl>
+          <div><dt class="label">LLM inference <span>Last answer</span></dt><dd id="teacherMs">—</dd></div>
+          <div><dt class="label">Reflex inference <span>Last frame</span></dt><dd id="reflexMs">—</dd></div>
+          <div><dt class="label">Reflex drives <span>Past 3 seconds</span></dt><dd id="share">0%</dd><meter id="meter" min="0" max="100" value="0" aria-label="Reflex share over the past 3 seconds"></meter></div>
+          <div><dt class="label">Teacher answers <span>Per 1,000 frames · twitch</span></dt><dd id="rate">—</dd></div>
+        </dl>
+      </aside>
+    </div>
+    <section class="scope" aria-labelledby="scopeTitle">
+      <div class="scopehead"><h2 id="scopeTitle">Who drives twitch?</h2><small>One column per frame</small></div>
+      <div class="trace"><div><span class="teacher label">Teacher</span><span class="reflex label">Reflex</span></div><canvas id="scope" role="img" aria-label="Orange teacher answer pulses above graphite reflex control ticks"></canvas></div>
+      <div class="axis mono" aria-hidden="true"><span>−8 s</span><span>−6 s</span><span>−4 s</span><span>−2 s</span><span>NOW</span></div>
+    </section>
+    <div class="transport">
+      <button id="pause" class="primary" disabled>Pause</button>
+      <button id="restart" disabled>Restart</button>
+      <input id="seek" type="range" min="0" max="0" value="0" aria-label="Replay position" disabled>
+      <time id="position">00:00 / 00:00</time>
+    </div>
+    <div id="caption" role="status"></div>
+  </section>
+  <section id="scoreboard" hidden aria-labelledby="resultsTitle">
+    <h1 id="resultsTitle" class="results-title">Run results</h1>
+    <p id="summary"></p><div class="cards" id="cards"></div>
+    <article class="card curve" id="curveCard" hidden><h3>Confidence and teacher agreement</h3><canvas id="curve" role="img" aria-label="Confidence on the horizontal axis and teacher agreement on the vertical axis"></canvas><p class="note" id="curveNote"></p></article>
+    <p id="filmTag">too slow to play. it grew a reflex.</p>
+  </section>
+</main>
+<footer>Real CPU decisions · deterministic lane game · 30 simulation frames per second</footer>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const film = params.has("film");
+document.body.classList.toggle("film", film);
+const panels = [...document.querySelectorAll(".panel")];
+const names = {A:"LLM only", B:"Paused teacher", C:"Rule heuristic", D:"Frozen reflex", E:"twitch", F:"Beveridge", G:"Random"};
+const ink = "#14181c", blue = "#2447f9", orange = "#ff5a1f";
+let data, ws, now = 0, running = false, view = false, started = 0, first = 0, end = 0, generation = 0;
+const clock = (seconds, decimal = false) => {
+  const sec = Math.max(0, Math.floor(seconds * 10 + 0.001) / 10);
+  return String(Math.floor(sec / 60)).padStart(2,"0") + ":" + (decimal ? (sec % 60).toFixed(1) : String(Math.floor(sec % 60))).padStart(decimal ? 4 : 2,"0");
+};
+const number = (n, places = 0) => n == null ? "—" : n.toFixed(places);
+function status(message) { if ($("#caption").textContent !== message) $("#caption").textContent = message; }
+function surface(canvas) {
+  const w = canvas.clientWidth, h = canvas.clientHeight, scale = devicePixelRatio;
+  if (canvas.width !== Math.round(w * scale) || canvas.height !== Math.round(h * scale)) {
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(scale,0,0,scale,0,0);
+  ctx.clearRect(0,0,w,h);
+  return {ctx,w,h};
+}
+function eventNear(n, side) {
+  for (let i=n; i>=Math.max(0,n-18); i--) {
+    const event = data.rows[i][side].event;
+    if (event) return {event, age:n-i};
+  }
+  return {event:"",age:0};
+}
+function stage(i, frame, n) {
+  const panel = panels[i], color = i === 0 ? blue : ink;
+  const {ctx,w,h} = surface(panel.querySelector("canvas"));
+  const lane = w/5, floor = h-42, ship = lane*(frame.lane+.5);
+  const near = eventNear(n,i);
+  const hit = near.event === "crash" || near.event === "wipeout";
+  panel.classList.toggle("hit", hit);
+  ctx.fillStyle = i === 0 ? "#2447f910" : "#14181c0e";
+  ctx.fillRect(lane*frame.lane,0,lane,floor);
+  ctx.strokeStyle = "#afbbc5";
+  for (let col=1; col<5; col++) {
+    ctx.beginPath(); ctx.moveTo(col*lane,0); ctx.lineTo(col*lane,floor); ctx.stroke();
+  }
+  ctx.strokeStyle = "#c3ced7";
+  for (let y=32; y<floor; y+=32) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+  ctx.strokeStyle = color;
+  ctx.setLineDash([4,5]); ctx.beginPath(); ctx.moveTo(0,floor); ctx.lineTo(w,floor); ctx.stroke(); ctx.setLineDash([]);
+  for (const [column,shape,hue,eta,travel] of frame.items) {
+    if (eta > travel) continue;
+    const x = lane*(column+.5), y = floor*(1-Math.max(0,eta)/travel);
+    const size = Math.max(7,Math.min(lane*.21,15));
+    ctx.fillStyle = hue ? "#96d1c4" : "#8da6fa";
+    ctx.strokeStyle = hue ? "#20594f" : "#293e95"; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    if (shape === 0) ctx.arc(x,y,size,0,Math.PI*2);
+    else ctx.rect(x-size*.86,y-size*.86,size*1.72,size*1.72);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.font = "11px Martian, monospace"; ctx.textAlign = "center"; ctx.fillStyle = "#4d5b67";
+  for (let col=0; col<5; col++) ctx.fillText(col+1,lane*(col+.5),h-13);
+  ctx.globalAlpha = frame.hearts ? 1 : .28;
+  ctx.fillStyle = color;
+  const s = Math.min(lane*.36,24);
+  ctx.beginPath(); ctx.moveTo(ship,floor-s); ctx.lineTo(ship+s,floor+s*.62);
+  ctx.lineTo(ship,floor+s*.23); ctx.lineTo(ship-s,floor+s*.62); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  if (hit) {
+    ctx.globalAlpha = (1-near.age/19)*.7;
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(ship,floor,s+near.age*2,0,Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  panel.querySelector("output").textContent = String(frame.score);
+  const hearts = panel.querySelector(".hearts");
+  hearts.textContent = "♥".repeat(frame.hearts)+"♡".repeat(3-frame.hearts);
+  hearts.setAttribute("aria-label", frame.hearts + " hearts");
+  panel.querySelector(".driver").textContent = frame.tick[1] === "reflex" ? "Reflex drives" : "Teacher hold";
+  const alert = panel.querySelector(".alert");
+  alert.hidden = !near.event;
+  alert.firstElementChild.textContent = ({catch:"+3 CATCH", crash:"−2 CRASH", wipeout:"SHIP DOWN"})[near.event] || "";
+}
+function scope(n) {
+  const {ctx,w,h} = surface($("#scope"));
+  const count = 8 * data.fps, column = w/count;
+  ctx.fillStyle = "#e5ebf0";
+  ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = "#bdc9d2"; ctx.lineWidth = 1;
+  for (let i=1; i<=4; i++) {
+    ctx.beginPath(); ctx.moveTo(i*w/4,0); ctx.lineTo(i*w/4,h); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke();
+  for (let i=Math.max(0,n-count+1); i<=n; i++) {
+    const f = data.rows[i][1], x = w-(n-i+1)*column;
+    if (i > 0 && i % data.flip === 0) {
+      ctx.fillStyle = orange; ctx.fillRect(x,0,1,h);
+    }
+    if (f.answer) {
+      ctx.fillStyle = orange; ctx.fillRect(x,5,Math.max(2,column),h/2-10);
+    }
+    ctx.fillStyle = f.tick[1] === "reflex" ? ink : "#bac8d3";
+    ctx.fillRect(x,h/2+6,Math.max(1,column-.65), f.tick[1] === "reflex" ? h/2-12 : 2);
+  }
+}
+function caption(n, e, flip, share) {
+  const epoch = Math.floor(n/data.flip);
+  const recovery = data.results?.E?.recovery[epoch-1];
+  if (recovery?.seconds != null) {
+    const reached = recovery.frame + Math.round(recovery.seconds * data.fps) - 1;
+    if (n >= reached && n < reached + data.fps * 2) {
+      return "The reflex reached 90% agreement across 10 held-out answers.";
+    }
+  }
+  const left = eventNear(n,0).event, right = eventNear(n,1).event;
+  if (left === "wipeout") return "LLM ship down. The game clock keeps moving.";
+  if (flip) return "Rule flipped. twitch is checking agreement on the new rule.";
+  if (left === "crash") return "LLM ship hit a hazard while holding its last decision.";
+  if (right === "crash" || right === "wipeout") return "twitch hit a hazard.";
+  if (share > .50) return "The reflex drove " + number(100*share) + "% of the last three seconds.";
+  if (e.tick[1] === "reflex") return "The reflex passed the agreement-calibrated threshold.";
+  return "The teacher scores frozen frames while both ships keep moving.";
+}
+function render(n) {
+  if (!data?.rows.length) return;
+  now = Math.max(0, Math.min(n, data.rows.length-1));
+  const [a,e] = data.rows[now], epoch = Math.floor(now/data.flip);
+  const flip = epoch > 0 && now%data.flip < data.fps*2;
+  const recent = data.rows.slice(Math.max(0,now-data.fps*3+1), now+1);
+  const share = recent.filter(pair => pair[1].tick[1] === "reflex").length/recent.length;
+  stage(0,a,now); stage(1,e,now); scope(now);
+  $("#clock").textContent = clock(now/data.fps,true);
+  $("#epoch").textContent = (flip ? "Rule flipped · " : "Rule ") + (epoch+1);
+  $("#ruleText").textContent = data.rules[epoch % data.rules.length];
+  $("#rule").classList.toggle("flip",flip);
+  $("#flipIn").textContent = ((data.flip-now%data.flip)/data.fps).toFixed(1)+" s";
+  $("#teacherMs").textContent = a.teacher_ms == null ? "—" : number(a.teacher_ms,1)+" ms";
+  $("#reflexMs").textContent = e.tick[2] == null ? "—" : number(e.tick[2],2)+" ms";
+  $("#share").textContent = number(share*100)+"%";
+  $("#meter").value = share*100;
+  $("#rate").textContent = number((data.answerCounts[now] || 0)*1000/(now+1),1);
+  $("#seek").value = now;
+  $("#position").textContent = clock(now/data.fps)+" / "+clock((data.total || data.rows.length)/data.fps);
+  status(caption(now,e,flip,share));
+}
+function metrics(key, title, value) {
+  const node = document.createElement("div");
+  const label = document.createElement("dt"); label.textContent = title;
+  const body = document.createElement("dd"); body.className = "mono"; body.textContent = value;
+  node.dataset.metric = key; node.append(label,body);
+  return node;
+}
+function curve(rows) {
+  const {ctx,w,h} = surface($("#curve"));
+  const pad = 27;
+  ctx.font = "10px Martian, monospace"; ctx.fillStyle = ink; ctx.strokeStyle = "#bdc9d2";
+  for (let i=0; i<=4; i++) {
+    const x=pad+(w-2*pad)*i/4, y=h-pad-(h-2*pad)*i/4;
+    ctx.fillText(i*25,x-6,h-8);
+    ctx.fillText(i*25,0,y+3);
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke();
+  }
+  ctx.setLineDash([3,4]); ctx.beginPath(); ctx.moveTo(pad,h-pad); ctx.lineTo(w-pad,pad); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=ink;
+  for (const r of rows) {
+    ctx.beginPath(); ctx.arc(pad+r.p*(w-2*pad),h-pad-r.agreement*(h-2*pad),Math.min(9,2+Math.sqrt(r.n)),0,Math.PI*2); ctx.fill();
+  }
+  $("#curveNote").textContent = "Confidence (%) on x, agreement (%) on y. Dot area reflects held-out answers in each bin.";
+}
+function showResults(on) {
+  if (on && !data?.results) return;
+  view = on;
+  $("#experiment").hidden = on;
+  $("#scoreboard").hidden = !on;
+  $("#results").setAttribute("aria-pressed",on);
+  if (!on) { render(now); return; }
+  const duration = (data.total || data.rows.length)/data.fps;
+  $("#summary").textContent = "Full CPU run · seed "+data.seed+" · "+clock(duration)+" simulation time";
+  const cards = $("#cards"); cards.replaceChildren();
+  for (const [arm,r] of Object.entries(data.results)) {
+    if (film && !["A","E"].includes(arm)) continue;
+    const card = document.createElement("article"); card.className = "card"+(arm === "E" ? " primary-result" : "");
+    const title=document.createElement("h3"); title.textContent=names[arm];
+    const score=document.createElement("div"); score.className="mono headline"; score.textContent=number(r.score_per_min,1);
+    const label=document.createElement("div"); label.className="label"; label.textContent="Score / minute";
+    const list=document.createElement("dl");
+    const recover = r.recovery.filter(x => x.seconds != null);
+    const firstFlip = r.recovery[0];
+    list.append(
+      metrics("latency","Median decision",number(r.latency_median_ms,2)+" ms"),
+      metrics("handoff","Reflex share",number(100*(r.share.reflex||0),1)+"%"),
+      metrics("crashes","Crashes",String(r.crashes)),
+      metrics("teacher","Teacher / 1,000 frames",number(r.answers_per_1000,1))
+    );
+    if (arm === "E") {
+      const split = firstFlip && firstFlip.seconds != null ? number(firstFlip.seconds,1)+" s" : "Not observed";
+      list.append(metrics("first-flip","First flip recovery",split),
+                  metrics("recovery","Flips reaching 90%",recover.length+" / "+r.recovery.length));
+    }
+    card.append(title,label,score,list); cards.append(card);
+  }
+  $("#curveCard").hidden = film || !data.agreement?.length;
+  if (!$("#curveCard").hidden) curve(data.agreement);
+}
+function pause() { running=false; $("#pause").textContent="Play"; }
+function animate(t) {
+  if (!running || ws) return;
+  const n = first + Math.floor((t-started)*data.fps/1000);
+  if (n >= end) { render(end-1); pause(); showResults(true); return; }
+  if (n !== now) render(n);
+  requestAnimationFrame(animate);
+}
+function start(n) {
+  pause(); showResults(false); render(n);
+  first=n; started=performance.now(); running=true;
+  $("#pause").textContent="Pause"; requestAnimationFrame(animate);
+}
+function close() {
+  pause(); if (ws) { ws.close(); ws=null; }
+  $("#results").disabled=true;
+}
+function count(pair, prior) { return prior+(pair[1].answer ? 1 : 0); }
+async function replay(name) {
+  close();
+  const id = ++generation;
+  if (!name) { status("No paired logs found. Start a live run with a local teacher."); return; }
+  $("#mode").textContent="LOADING REPLAY";
+  try {
+    const response = await fetch("/api/replay/"+encodeURIComponent(name));
+    if (!response.ok) throw new Error("Could not load run "+name);
+    const next = await response.json();
+    if (id !== generation) return;
+    data = next;
+    let sum=0;
+    data.answerCounts=data.rows.map(pair => sum=count(pair,sum));
+    end=data.rows.length;
+    $("#seed").textContent="SEED "+data.seed+" · 30 Hz";
+    $("#mode").textContent="REPLAY · 1×";
+    $("#seek").max=end-1;
+    for (const id of ["seek","pause","restart","results"]) $("#"+id).disabled=false;
+    showResults(false);
+    render(0);
+    if (!film) start(0);
+    window.captureReady=true;
+  } catch (err) { status(err.message); }
+}
+function live() {
+  close(); ++generation; data=null;
+  for (const id of ["seek","pause","restart"]) $("#"+id).disabled=true;
+  $("#experiment").hidden=false; $("#scoreboard").hidden=true;
+  $("#mode").textContent="CONNECTING"; status("Starting the CPU controllers…");
+  const socket = new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/ws");
+  ws=socket;
+  socket.onmessage = event => {
+    if (ws !== socket) return;
+    const msg=JSON.parse(event.data);
+    if (msg.error) status(msg.error);
+    else if (msg.rules) {
+      data={...msg,rows:[],answerCounts:[]}; view=false;
+      $("#mode").textContent="LIVE"; $("#seed").textContent="SEED "+data.seed+" · 30 Hz";
+    } else if (msg.row) {
+      data.rows.push(msg.row);
+      data.answerCounts.push(count(msg.row,data.answerCounts.at(-1)||0));
+      render(data.rows.length-1);
+    } else if (msg.results) {
+      data.results=msg.results; $("#results").disabled=false; showResults(true);
+    }
+  };
+  socket.onerror = () => { if (ws === socket) status("Unable to connect to the local run."); };
+  socket.onclose = () => {
+    if (ws !== socket) return;
+    ws=null;
+    if (!data?.results) $("#mode").textContent="LIVE STOPPED";
+  };
+}
+$("#pause").onclick = () => running ? pause() : start(now >= end-1 ? 0 : now);
+$("#seek").oninput = e => { pause(); render(Number(e.target.value)); };
+$("#restart").onclick = () => start(0);
+$("#replay").onclick = () => replay($("#recording").value);
+$("#recording").onchange = () => replay($("#recording").value);
+$("#live").onclick = live;
+$("#results").onclick = () => { pause(); showResults(!view); };
+window.addEventListener("resize", () => view ? showResults(true) : render(now));
+if (film) window.captureAt = n => {
+  if (n === "results") showResults(true);
+  else { if (view) showResults(false); render(n); }
+};
+fetch("/api/runs").then(r=>r.json()).then(logs=>{
+  for (const name of logs) $("#recording").append(new Option(name,name));
+  $("#recording").value = params.get("run") || logs.find(name=>name.startsWith("smoke-")) || logs[0] || "";
+  $("#replay").disabled = !logs.length;
+  replay($("#recording").value);
+}).catch(error=>status(error.message));
+</script>
+</body>
+</html>
