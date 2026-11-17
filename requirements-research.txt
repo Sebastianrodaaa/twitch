@@ -1,0 +1,6 @@
+-r requirements.txt
+bev-decisions==0.2.5
+transformers==4.57.6
+matplotlib==3.10.9
+playwright==1.65.2
+Pillow==11.3.0
