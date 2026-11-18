@@ -44,3 +44,5 @@ We tested whether a small CPU network could learn a 30 Hz lane game from a langu
 ## Related work
 
 SwiftSage and DPT-Agent use fast/slow decision layers. ReflexGrad uses progress-gated dual-process recovery. Input prediction hides game inference delay through prediction and correction. Beveridge, Decision 1.0, and System 1 agents study fast typed and local decisions. twitch combines classic policy distillation and DAgger-style learner-state collection with asynchronous frozen-frame labels and measured handoff under rule changes. [References](../INSPIRATIONS.md)
+
+JevRSI is close prior work on asynchronous System-1/System-2 collaboration. Both models keep fixed weights while System-2 builds and revises a harness that provides decision context to System-1. In twitch, the slow teacher scores frozen game frames, and those answers update the reflex network's weights through online distillation while the game keeps running. [JevRSI paper](https://arxiv.org/abs/2611.22432)
